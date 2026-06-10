@@ -1,0 +1,30 @@
+# credentials — never commit these
+.env
+.env.local
+.env.*.local
+firebase-service-account.json
+firebase-service-account.json.json
+*.pem
+*.key
+
+# generator runtime
+generator/state/
+generator/output/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# Node / Next.js
+node_modules/
+.next/
+.vercel/
+
+# OS
+.DS_Store
+Thumbs.db
