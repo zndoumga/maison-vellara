@@ -1,0 +1,8 @@
+Faker==30.8.1
+python-dateutil==2.9.0.post0
+tzdata==2024.2
+python-dotenv==1.0.1
+supabase==2.9.1
+firebase-admin==6.5.0
+azure-storage-blob==12.23.1
+APScheduler==3.10.4
