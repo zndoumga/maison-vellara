@@ -23,8 +23,13 @@ from firebase_admin import credentials, firestore
 
 def _ensure_init():
     if not firebase_admin._apps:
-        cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "./firebase-service-account.json")
-        cred = credentials.Certificate(cred_path)
+        raw = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+        if raw:
+            import json
+            cred = credentials.Certificate(json.loads(raw))
+        else:
+            cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "./firebase-service-account.json")
+            cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
 
 
