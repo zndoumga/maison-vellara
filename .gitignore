@@ -1,6 +1,7 @@
 # credentials — never commit these
 .env
 .env.local
+dashboard/.env.local
 .env.*.local
 firebase-service-account.json
 firebase-service-account.json.json
