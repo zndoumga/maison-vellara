@@ -46,7 +46,7 @@ def make_new_client(
         residence = _NATIONALITY_COUNTRY.get(nationality, "FR")
 
     email = person["email"] if not chance(rng, 0.05) else None
-    phone = person["phone"] if not chance(rng, 0.15) else None
+    phone = person["phone"]  # every boutique client is captured with a phone
 
     rec = {
         "client_id": identity.client_id(seq),
