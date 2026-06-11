@@ -24,11 +24,15 @@ export default function SalesChart() {
   useEffect(() => {
     async function load() {
       const days = Array.from({ length: 14 }, (_, i) => format(subDays(new Date(), 13 - i), 'yyyy-MM-dd'))
-      const { data: posData } = await supabase.schema('pos').from('transactions')
-        .select('transaction_date').eq('transaction_type', 'SALE').in('transaction_date', days)
+      // Count per day with head-only count queries. A single `.in(days)` fetch
+      // hits Supabase's 1000-row cap and silently drops the later dates.
       const boutique: Record<string, number> = {}
-      days.forEach(d => boutique[d] = 0)
-      posData?.forEach(r => { if (boutique[r.transaction_date] !== undefined) boutique[r.transaction_date]++ })
+      await Promise.all(days.map(async d => {
+        const { count } = await supabase.schema('pos').from('transactions')
+          .select('transaction_id', { count: 'exact', head: true })
+          .eq('transaction_type', 'SALE').eq('transaction_date', d)
+        boutique[d] = count ?? 0
+      }))
       const online: Record<string, number> = {}
       await Promise.all(days.map(async d => {
         const orders = await fetchEcomOrders(d)
