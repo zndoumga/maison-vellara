@@ -1,78 +1,76 @@
 """
-Railway always-on scheduler.
+Railway nightly batch scheduler.
 
-Runs every 45 minutes, generating data for the current intra-day window so
-that events accumulate realistically throughout the day rather than all
-appearing at once. At midnight it rolls over to a new date automatically.
+Once per day (02:00 UTC) it generates every COMPLETE day that hasn't been
+generated yet — i.e. all days strictly before today (UTC). It never generates a
+partial current day, so each morning exactly one clean, full day appears.
 
-State persists in /data/state.db (Railway persistent volume) so the world
-evolves coherently across restarts.
+State lives in Supabase (generator_state schema) — a single shared source of
+truth with the historical backfill, so there are no ID collisions and the world
+evolves coherently. A `last_generated_date` cursor in state tracks progress and
+lets the job catch up if Railway was down for a few days.
+
+The scheduler will not run until the state has been seeded (cursor present);
+this prevents a fresh Railway deploy from initialising a conflicting world
+before the backfill state has been synced in.
 """
 from __future__ import annotations
 
 import logging
-import os
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-log = logging.getLogger(__name__)
-
-# On Railway, state lives on the persistent volume at /data
-STATE_DIR = os.environ.get("STATE_DIR", "/data/state")
-OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "/tmp/output")  # not used in cloud mode
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+log = logging.getLogger("scheduler")
 
 
-def run_window():
-    """Generate one 45-minute window for the current date."""
+def run_pending_days():
     import engine
     import seed_masters
     from sinks.composite_sink import CompositeSink
-    from state import LocalStateStore
-
-    now = datetime.now(timezone.utc)
-    today = now.date()
-    hour = now.hour
-
-    # Window covers the last 45 minutes rounded to the hour
-    window_start = max(0, hour - 1)
-    window_end = hour + 1
-
-    log.info(f"Generating window {window_start}h-{window_end}h for {today}")
+    from state_supabase import SupabaseStateStore
 
     sink = CompositeSink()
-    state = LocalStateStore(STATE_DIR)
+    state = SupabaseStateStore()
 
-    try:
-        sink.write_masters(seed_masters.build_masters())
-        summary = engine.run(today, state, sink, window=(window_start, window_end))
-        log.info(
-            f"Done — pos={summary['pos']} clients={summary['clients']} "
-            f"ecom_orders={summary['ecom_orders']} ecom_events={summary['ecom_events']} "
-            f"sellthrough={summary['sellthrough']}"
-        )
-    except Exception as e:
-        log.error(f"Window generation failed: {e}", exc_info=True)
-    finally:
-        state.close()
-        sink.close()
+    cursor = state.get_meta("last_generated_date")
+    if not cursor:
+        log.warning("No 'last_generated_date' in state — not seeded yet. Skipping. "
+                    "Run sync_state_to_supabase.py from the backfill machine first.")
+        return
+
+    last = date.fromisoformat(cursor)
+    today = datetime.now(timezone.utc).date()
+    target = last + timedelta(days=1)
+
+    if target >= today:
+        log.info(f"Nothing to do — last generated {last}, today is {today} (current day not yet complete).")
+        return
+
+    sink.write_masters(seed_masters.build_masters())
+    while target < today:
+        log.info(f"Generating full day {target} …")
+        summary = engine.run(target, state, sink)  # full-day, replace-by-date
+        log.info(f"  done — pos={summary['pos']} clients={summary['clients']} "
+                 f"ecom_orders={summary['ecom_orders']} sellthrough={summary['sellthrough']}")
+        target += timedelta(days=1)
+
+    sink.close()
+    log.info("Catch-up complete.")
 
 
 if __name__ == "__main__":
-    log.info("Maison Vellara scheduler starting...")
-    os.makedirs(STATE_DIR, exist_ok=True)
-
-    # Run immediately on startup so Railway deploys produce data right away
-    run_window()
+    log.info("Maison Vellara nightly scheduler starting…")
+    try:
+        run_pending_days()  # catch up on startup
+    except Exception as e:
+        log.error(f"Startup run failed: {e}", exc_info=True)
 
     scheduler = BlockingScheduler(timezone="UTC")
-    scheduler.add_job(run_window, "interval", minutes=45, id="data_window")
-    log.info("Scheduler running — every 45 minutes")
+    scheduler.add_job(run_pending_days, "cron", hour=2, minute=0, id="nightly")
+    log.info("Scheduler armed — nightly at 02:00 UTC")
     scheduler.start()

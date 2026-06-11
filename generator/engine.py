@@ -71,6 +71,8 @@ def run(d: date, state, sink, window: tuple[int, int] | None = None) -> dict:
     # housekeeping: keep the returns/corrections lookback window bounded
     state.prune_transactions(d - timedelta(days=70))
     state.prune_ecom_orders(d - timedelta(days=35))
+    # advance the generation cursor so the nightly job knows the last full day done
+    state.set_meta("last_generated_date", d.isoformat())
     state.commit()
 
     return {
