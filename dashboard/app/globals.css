@@ -12,45 +12,55 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background-color: #080808;
-  color: #F5F0E8;
+  background-color: #F7F5F0;
+  color: #1C1A17;
   font-family: var(--font-dm-mono);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
 
-/* Subtle noise texture overlay */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.4;
-}
-
-/* Thin gold horizontal rule */
-.gold-rule {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #B8924A 30%, #B8924A 70%, transparent);
-  opacity: 0.4;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: #0F0F0F; }
-::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 2px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #EDE9E0; }
+::-webkit-scrollbar-thumb { background: #C9B99A; border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: #B8924A; }
 
 .card {
-  background: #0F0F0F;
-  border: 1px solid #1C1C1C;
+  background: #FFFFFF;
+  border: 1px solid #E8E3D8;
   border-radius: 2px;
 }
 
 .card-gold {
-  background: #0F0F0F;
-  border: 1px solid rgba(184, 146, 74, 0.25);
+  background: #FFFFFF;
+  border: 1px solid rgba(184, 146, 74, 0.3);
   border-radius: 2px;
 }
+
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #B8924A 30%, #B8924A 70%, transparent);
+  opacity: 0.35;
+}
+
+/* Table styles */
+table { border-collapse: collapse; width: 100%; }
+thead th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #9A8E7E;
+  border-bottom: 1px solid #E8E3D8;
+  font-family: var(--font-dm-mono);
+  font-weight: 400;
+}
+tbody td {
+  padding: 8px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid #F0ECE4;
+  font-family: var(--font-dm-mono);
+  color: #1C1A17;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #FAF8F4; }
