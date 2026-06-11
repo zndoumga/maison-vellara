@@ -68,9 +68,10 @@ def main() -> None:
             if k == "date":
                 continue
             totals[k] = totals.get(k, 0) + v
-        if len(days) <= 5 or d == days[-1]:
+        idx = days.index(d) + 1
+        if len(days) <= 5 or idx % 10 == 0 or d == days[-1]:
             print(
-                f"  {summary['date']}: pos={summary['pos']} clients={summary['clients']} "
+                f"  [{idx}/{len(days)}] {summary['date']}: pos={summary['pos']} clients={summary['clients']} "
                 f"inv={summary['inventory']} as={summary['after_sales']} "
                 f"ev={summary['ecom_events']} ord={summary['ecom_orders']} "
                 f"ret={summary['ecom_returns']} wsf={summary['wholesale_files']} "
